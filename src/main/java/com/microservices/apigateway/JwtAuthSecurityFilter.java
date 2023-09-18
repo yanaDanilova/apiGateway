@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.WebFilter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -24,7 +25,7 @@ import java.util.Collection;
 import java.util.Date;
 
 @Component
-public class JwtAuthSecurityFilter extends OncePerRequestFilter {
+public class JwtAuthSecurityFilter extends OncePerRequestFilter  {
 
     @Autowired
     Environment env;
@@ -130,7 +131,6 @@ public class JwtAuthSecurityFilter extends OncePerRequestFilter {
 
         return returnValue;
     }
-
 
 
 }

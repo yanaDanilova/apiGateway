@@ -3,47 +3,45 @@ package com.microservices.apigateway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
-import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 
-@Configuration
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+
+import org.springframework.security.web.server.SecurityWebFilterChain;
+
+
 @EnableWebFluxSecurity
+@Configuration
 public class SecurityConfiguration {
 
     private final JwtAuthSecurityFilter jwtAuthSecurityFilter;
 
+
+
     @Autowired
     public SecurityConfiguration(JwtAuthSecurityFilter jwtAuthSecurityFilter) {
         this.jwtAuthSecurityFilter = jwtAuthSecurityFilter;
+
     }
 
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityWebFilterChain webHttpSecurity(ServerHttpSecurity http) {
+        http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
 
-        http.authorizeHttpRequests((requests) -> requests
-                        .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
-                        .anyRequest()
-                        .authenticated());
-
-
-        http.sessionManagement(new Customizer<SessionManagementConfigurer<HttpSecurity>>() {
-            @Override
-            public void customize(SessionManagementConfigurer<HttpSecurity> httpSecuritySessionManagementConfigurer) {
-                httpSecuritySessionManagementConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-            }
-        });
-
-        http.addFilterBefore(jwtAuthSecurityFilter, UsernamePasswordAuthenticationFilter.class);
+                .authorizeExchange((exchanges) -> exchanges
+                        .anyExchange().permitAll())
+                .cors(ServerHttpSecurity.CorsSpec::disable)
+                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable);
 
 
         return http.build();
     }
+
 }
