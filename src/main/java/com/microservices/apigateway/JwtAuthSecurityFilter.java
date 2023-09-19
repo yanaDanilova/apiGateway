@@ -8,46 +8,38 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
-
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 
 @Component
-public class JwtAuthSecurityFilter extends OncePerRequestFilter  {
+public class JwtAuthSecurityFilter implements WebFilter {
 
     @Autowired
     Environment env;
+
+
+    @NonNull
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
-
+    public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
         }
-        jwt = authHeader.substring(7);
-        if(isJwtValid(jwt)){ // check if this auth header exist at all, check if token is not expired and verify the Signature
-
-            // is it enough to check if this auth header exist at all, check if token is not expired and verify the Signature ? How does it work the verification of Signature? I copy this code from you project
-
-
-            //what should we do if token is valid? Create new AuthenticationToken and put it in SecurityContext? What we should use as UserDetails? Username and Password from token?
-
-
+        String jwt = authHeader.substring(7);
+        if(isJwtValid(jwt)){
             UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(new UserDetails() {
                 @Override
                 public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -61,7 +53,7 @@ public class JwtAuthSecurityFilter extends OncePerRequestFilter  {
 
                 @Override
                 public String getUsername() {
-                    return null; // TO DO:  username from token
+                    return getUsernameFromToken(jwt);
                 }
 
                 @Override
@@ -85,16 +77,12 @@ public class JwtAuthSecurityFilter extends OncePerRequestFilter  {
                 }
             },null);
 
-            authenticationToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
 
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-            }
-
-        filterChain.doFilter(request, response);
+            return chain.filter(exchange)
+                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
+        }
+        return chain.filter(exchange);
     }
-
 
     private boolean isJwtValid(String jwt) {
         boolean returnValue = true;
@@ -132,8 +120,88 @@ public class JwtAuthSecurityFilter extends OncePerRequestFilter  {
         return returnValue;
     }
 
+    private String getUsernameFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(token)
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
+    }
+
+
+
+
+
+
+/*    @Autowired
+    Environment env;
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        final String authHeader = request.getHeader("Authorization");
+        final String jwt;
+        final String username;
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        jwt = authHeader.substring(7);
+        if(isJwtValid(jwt)){ // check if this auth header exist at all, check if token is not expired and verify the Signature
+
+            // is it enough to check if this auth header exist at all, check if token is not expired and verify the Signature ? How does it work the verification of Signature? I copy this code from you project
+
+
+            //what should we do if token is valid? Create new AuthenticationToken and put it in SecurityContext? What we should use as UserDetails? Username and Password from token?
+
+
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(new UserDetails() {
+                @Override
+                public Collection<? extends GrantedAuthority> getAuthorities() {
+                    return null;
+                }
+
+                @Override
+                public String getPassword() {
+                    return null;
+                }
+
+                @Override
+                public String getUsername() {
+                    return getUsernameFromToken(jwt);
+                }
+
+                @Override
+                public boolean isAccountNonExpired() {
+                    return false;
+                }
+
+                @Override
+                public boolean isAccountNonLocked() {
+                    return false;
+                }
+
+                @Override
+                public boolean isCredentialsNonExpired() {
+                    return false;
+                }
+
+                @Override
+                public boolean isEnabled() {
+                    return false;
+                }
+            },null);
+
+            authenticationToken.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        }
+
+        filterChain.doFilter(request, response);
+    }*/
 
 }
-
 
 
