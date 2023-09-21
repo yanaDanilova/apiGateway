@@ -12,6 +12,8 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Mono;
 
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
 @EnableWebFluxSecurity
 @Configuration
 public class SecurityConfiguration {
@@ -41,6 +43,7 @@ public class SecurityConfiguration {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange((exchanges) -> exchanges
                         .pathMatchers("/api/auth/**").permitAll()
+                        .pathMatchers("/h2-console/**").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthSecurityFilter, SecurityWebFiltersOrder.AUTHENTICATION);
 

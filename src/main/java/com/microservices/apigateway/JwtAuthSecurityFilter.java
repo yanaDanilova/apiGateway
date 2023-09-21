@@ -2,6 +2,8 @@ package com.microservices.apigateway;
 
 import io.jsonwebtoken.*;
 
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +22,11 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.Key;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtAuthSecurityFilter implements WebFilter {
@@ -92,7 +96,7 @@ public class JwtAuthSecurityFilter implements WebFilter {
 
         String tokenSecret = env.getProperty("jwt.secret");
         byte[] secretKeyBytes = Base64.getEncoder().encode(tokenSecret.getBytes());
-        SecretKey signingKey = new SecretKeySpec(secretKeyBytes, SignatureAlgorithm.HS512.getJcaName());
+        Key signingKey = getSignInKey();
 
         JwtParser jwtParser = Jwts.parserBuilder()
                 .setSigningKey(signingKey)
@@ -122,7 +126,7 @@ public class JwtAuthSecurityFilter implements WebFilter {
 
     private String getUsernameFromToken(String token) {
         Claims claims = Jwts.parser()
-                .setSigningKey(token)
+                .setSigningKey(getSignInKey())
                 .parseClaimsJws(token)
                 .getBody();
 
@@ -130,7 +134,18 @@ public class JwtAuthSecurityFilter implements WebFilter {
     }
 
 
+    private List<String> getRolesFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(getSignInKey())
+                .parseClaimsJws(token)
+                .getBody();
+        return (List<String>) claims.get("roles");
+    }
 
+    private Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(env.getProperty("jwt.secret"));
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
 
 
