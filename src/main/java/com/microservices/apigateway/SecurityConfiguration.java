@@ -33,6 +33,7 @@ public class SecurityConfiguration {
         return authentication -> Mono.empty();
     }
 
+/*
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @Bean
     SecurityWebFilterChain webHttpSecurity(ServerHttpSecurity http) {
@@ -43,11 +44,27 @@ public class SecurityConfiguration {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange((exchanges) -> exchanges
                         .pathMatchers("/api/auth/**").permitAll()
-                        .pathMatchers("/h2-console/**").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthSecurityFilter, SecurityWebFiltersOrder.AUTHENTICATION);
 
         return http.build();
     }
+*/
+
+
+    @Bean
+
+    SecurityWebFilterChain webFluxSecurityFilterChain(ServerHttpSecurity http) {
+        http.csrf(csrf -> csrf.disable())
+                .cors().disable()
+                .authorizeExchange()
+                .pathMatchers("/files").authenticated()
+                .anyExchange().permitAll()
+                .and()
+                .addFilterAt(jwtAuthSecurityFilter,SecurityWebFiltersOrder.AUTHENTICATION);
+        return http.build();
+    }
+
+
 
 }

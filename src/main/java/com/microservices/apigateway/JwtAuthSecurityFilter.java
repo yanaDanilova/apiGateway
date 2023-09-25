@@ -84,6 +84,7 @@ public class JwtAuthSecurityFilter implements WebFilter {
 
             return chain.filter(exchange)
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
+
         }
         return chain.filter(exchange);
     }
@@ -116,8 +117,12 @@ public class JwtAuthSecurityFilter implements WebFilter {
         if (subject == null || subject.isEmpty()) {
             returnValue = false;
         }
+        if (expiration == null){
+            returnValue= false;
+        }
+        var currentDateTime = new Date();
 
-        if (expiration==null || !expiration.before(new Date())){
+        if (expiration.before(currentDateTime)){
             returnValue= false;
         }
 
